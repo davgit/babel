@@ -99,7 +99,7 @@ export const getLowestUnreleased = (
   return semverMin(a, b);
 };
 
-export const filterStageFromList = (list: any, stageList: any) => {
+export function filterStageFromList(list, stageList) {
   return Object.keys(list).reduce((result, item) => {
     if (!stageList[item]) {
       result[item] = list[item];
@@ -107,26 +107,75 @@ export const filterStageFromList = (list: any, stageList: any) => {
 
     return result;
   }, {});
-};
+}
 
-export const isPolyfillSource = (source: string): boolean =>
-  source === "@babel/polyfill" || source === "core-js";
+export function isPolyfillSource(source) {
+  return source === "@babel/polyfill" || source === "core-js";
+}
+
+export function isCoreJSSource(source) {
+  switch (source) {
+    case "core-js":
+    case "core-js/features":
+      return /./;
+    case "core-js/stable":
+      return /^(es|web)\./;
+    case "core-js/es":
+      return /^es\./;
+    case "core-js/esnext":
+    case "core-js/proposals":
+    case "core-js/stage":
+      return /^esnext\./;
+    case "core-js/web":
+      return /^web\./;
+  }
+  return false;
+}
+
+export function isRegeneratorSource(source) {
+  return source === "regenerator-runtime/runtime";
+}
 
 const modulePathMap = {
   "regenerator-runtime": "regenerator-runtime/runtime",
 };
 
-export const getModulePath = (mod: string) =>
-  modulePathMap[mod] || `core-js/modules/${mod}`;
+export function getModulePath(mod) {
+  return modulePathMap[mod] || `core-js/modules/${mod}`;
+}
 
-export const createImport = (path: Object, mod: string) =>
-  addSideEffect(path, getModulePath(mod));
+export function createImport(path, mod) {
+  return addSideEffect(path, getModulePath(mod));
+}
 
-export const isRequire = (t: Object, path: Object): boolean =>
-  t.isExpressionStatement(path.node) &&
-  t.isCallExpression(path.node.expression) &&
-  t.isIdentifier(path.node.expression.callee) &&
-  path.node.expression.callee.name === "require" &&
-  path.node.expression.arguments.length === 1 &&
-  t.isStringLiteral(path.node.expression.arguments[0]) &&
-  isPolyfillSource(path.node.expression.arguments[0].value);
+export function isRequire(t, path) {
+  return (
+    t.isExpressionStatement(path.node) &&
+    t.isCallExpression(path.node.expression) &&
+    t.isIdentifier(path.node.expression.callee) &&
+    path.node.expression.callee.name === "require" &&
+    path.node.expression.arguments.length === 1 &&
+    t.isStringLiteral(path.node.expression.arguments[0])
+  );
+}
+
+export function isPolyfillRequire(t, path) {
+  return (
+    isRequire(t, path) &&
+    isPolyfillSource(path.node.expression.arguments[0].value)
+  );
+}
+
+export function isCoreJSRequire(t, path) {
+  return (
+    isRequire(t, path) &&
+    isCoreJSSource(path.node.expression.arguments[0].value)
+  );
+}
+
+export function isRegeneratorRequire(t, path) {
+  return (
+    isRequire(t, path) &&
+    isRegeneratorSource(path.node.expression.arguments[0].value)
+  );
+}
